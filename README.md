@@ -38,10 +38,10 @@ To use the Google Drive upload features, you need to set up a Google Cloud Proje
 *   Go to the [Google Cloud Console](https://console.cloud.google.com/).
 *   Create a new project or select an existing one.
 
-### 2. Enable the Google Drive API
-
+### 2. Enable Google APIs
 *   In your Google Cloud Project, navigate to "APIs & Services" > "Library".
-*   Search for "Google Drive API" and enable it for your project.
+*   Search for "Google Drive API" and enable it.
+*   Search for "Google Sheets API" and enable it as well.
 
 ### 3. Create OAuth 2.0 Credentials
 
@@ -86,7 +86,7 @@ token_uri = "https://oauth2.googleapis.com/token"
 auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
 client_secret = "YOUR_CLIENT_SECRET"
 # Ensure this list includes the redirect URI used by the app (e.g., http://localhost:8501 for local)
-redirect_uris = ["http://localhost:8501"] 
+redirect_uris = ["http://localhost:8501", "YOUR_DEPLOYED_APP_URL_HERE_IF_APPLICABLE"] 
 
 # Optional: If you obtain a user's refresh token and want to store it for prolonged access
 # (requires careful security consideration and user consent management)
@@ -103,8 +103,21 @@ redirect_uris = ["http://localhost:8501"]
 # To get a folder ID, open the folder in Google Drive. The ID is the last part of the URL.
 # e.g., if URL is https://drive.google.com/drive/folders/1aBcDeFgHiJkLmNoPqRsTuVwXyZ,
 # the ID is 1aBcDeFgHiJkLmNoPqRsTuVwXyZ
-target_folder_id = "YOUR_GOOGLE_DRIVE_TARGET_FOLDER_ID"
+target_folder_id = "YOUR_GOOGLE_DRIVE_TARGET_FOLDER_ID_FOR_DATASETS"
+
+[google_sheets]
+# Name of the Google Sheets workbook for team management.
+# Ensure this sheet is shared with the Google account used for OAuth.
+datathon_teams_workbook_name = "DatathonTeams" 
 ```
+
+### 5. Share the "DatathonTeams" Google Sheet (Important!)
+
+For the application to access and manage the "DatathonTeams" Google Sheet:
+
+*   Create a new Google Sheet named **"DatathonTeams"** in your Google Drive (or use the name you configured in `secrets.toml` under `google_sheets.datathon_teams_workbook_name`).
+*   The Google account associated with the OAuth credentials you configured (the one you use to log in when the app asks for Google authentication) **must have edit permissions** for this "DatathonTeams" sheet.
+*   Alternatively, if you were using a Service Account (not covered in current setup), you would share the sheet with the service account's email address. With the current OAuth (user-based) setup, your own user account needs access.
 
 **Important Security Notes:**
 *   The `.streamlit/secrets.toml` file should **NOT** be committed to your Git repository if it contains real secrets. Ensure your project's `.gitignore` file includes `.streamlit/secrets.toml`.

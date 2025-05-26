@@ -370,3 +370,59 @@ def get_drive_shareable_link(file_id: str, drive_service) -> str | None:
     except Exception as e:
         st.error(f"An unexpected error occurred with file ID {file_id}: {e}")
         return None
+
+def list_csv_files_from_drive(drive_service, folder_id: str = None) -> list:
+    if not drive_service:
+        st.error("Google Drive service not available. Cannot list files.")
+        return []
+
+    actual_folder_id = folder_id
+    if not actual_folder_id:
+        try:
+            actual_folder_id = st.secrets["google_drive"]["target_folder_id"]
+        except (KeyError, AttributeError):
+            st.warning(f"Target Google Drive folder ID not found in st.secrets.google_drive.target_folder_id. "
+                       f"Using default placeholder: {DEFAULT_TARGET_DRIVE_FOLDER_ID} to list files. "
+                       f"Please configure this in your secrets.toml.")
+            actual_folder_id = DEFAULT_TARGET_DRIVE_FOLDER_ID
+            if actual_folder_id == "REPLACE_WITH_YOUR_ACTUAL_GOOGLE_DRIVE_FOLDER_ID":
+                 st.error("Default folder ID is still the placeholder. Cannot list files without a valid folder ID.")
+                 return[]
+
+
+    csv_files = []
+    try:
+        query = f"'{actual_folder_id}' in parents and mimeType='text/csv' and trashed=false"
+        
+        page_token = None
+        while True:
+            response = drive_service.files().list(
+                q=query,
+                spaces='drive',
+                fields='nextPageToken, files(id, name)',
+                pageSize=100, # Max 1000, but 100 is common for page size
+                pageToken=page_token
+            ).execute()
+            
+            for file_item in response.get('files', []):
+                csv_files.append({'id': file_item.get('id'), 'name': file_item.get('name')})
+            
+            page_token = response.get('nextPageToken', None)
+            if page_token is None:
+                break
+        
+        if csv_files:
+            # Sort by name for consistent display
+            csv_files = sorted(csv_files, key=lambda x: x['name'].lower())
+            # st.info(f"Found {len(csv_files)} CSV files in the target folder.")
+        # else:
+            # st.info("No CSV files found in the target Google Drive folder.")
+            
+    except HttpError as error:
+        st.error(f"An API error occurred while listing CSV files: {error.content.decode()}")
+        return [] # Return empty list on error
+    except Exception as e:
+        st.error(f"An unexpected error occurred while listing CSV files: {e}")
+        return []
+        
+    return csv_files
