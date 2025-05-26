@@ -130,23 +130,36 @@ def get_gspread_client():
     # If credentials are None (auth pending or failed), this will also return None
     return None
 
-def connect_to_workbook(gspread_client, workbook_name: str):
+# In modules/team_manager.py
+
+def connect_to_workbook(gspread_client): # workbook_name removed from arguments
+    """Connects to the Google Sheets workbook specified in st.secrets or defaults to 'DatathonTeams'."""
     if not gspread_client:
         st.error("gspread client not available. Cannot connect to workbook.")
         return None
-    if not workbook_name:
-        st.error("Workbook name not provided.")
-        return None
+    
+    try:
+        # Attempt to get workbook name from Streamlit secrets
+        workbook_name = st.secrets["google_sheets"]["datathon_teams_workbook_name"]
+    except (KeyError, AttributeError, TypeError): # TypeError if st.secrets isn't set up as expected by hasattr
+        st.info("Workbook name not found in st.secrets.google_sheets.datathon_teams_workbook_name. "
+               "Defaulting to 'DatathonTeams'. You can configure this in your .streamlit/secrets.toml file.")
+        workbook_name = "DatathonTeams" # Default workbook name
         
     try:
         spreadsheet = gspread_client.open(workbook_name)
-        st.success(f"Successfully connected to workbook: '{workbook_name}'")
+        # Optional: st.success message upon successful connection can be added if desired
+        # st.success(f"Successfully connected to workbook: '{workbook_name}'") 
         return spreadsheet
     except gspread.exceptions.SpreadsheetNotFound:
-        st.error(f"Spreadsheet '{workbook_name}' not found. Ensure the name is correct and the authenticated user has access.")
+        st.error(f"Spreadsheet named '{workbook_name}' not found. "
+                 "Please ensure it exists and is shared with the authenticated Google account.")
         return None
-    except Exception as e: # Catch other gspread or general exceptions
-        st.error(f"An error occurred while opening workbook '{workbook_name}': {e}")
+    except gspread.exceptions.APIError as e:
+        st.error(f"An API error occurred while opening workbook '{workbook_name}': {e}")
+        return None
+    except Exception as e: # Catch other potential exceptions
+        st.error(f"An unexpected error occurred while trying to open workbook '{workbook_name}': {e}")
         return None
 
 def get_max_team_size() -> int:

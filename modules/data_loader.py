@@ -3,9 +3,10 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaIoBaseUpload
+from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload # Added MediaIoBaseDownload
 import io # For BytesIO or StringIO if needed for wrapping file content
 import os # For future use if handling client_secret.json directly, though st.secrets is preferred
+import pandas as pd # Added pandas
 
 # Define the scopes needed for the application
 SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive.metadata.readonly']
@@ -426,3 +427,68 @@ def list_csv_files_from_drive(drive_service, folder_id: str = None) -> list:
         return []
         
     return csv_files
+
+# Ensure HttpError is imported: from googleapiclient.errors import HttpError
+# Ensure pandas as pd and io are imported.
+
+def download_csv_from_drive_to_dataframe(drive_service, file_id: str) -> pd.DataFrame | None:
+    """
+    Downloads a CSV file from Google Drive directly into a pandas DataFrame.
+
+    Args:
+        drive_service: Authenticated Google Drive API service instance.
+        file_id: The ID of the Google Drive file to download.
+
+    Returns:
+        A pandas DataFrame containing the CSV data, or None if an error occurs.
+    """
+    if not drive_service:
+        # st.error("Google Drive service not available. Cannot download file.") # No st in modules
+        print("Error: Google Drive service not available in data_loader.download_csv_from_drive_to_dataframe.")
+        return None
+    if not file_id:
+        # st.warning("No file ID provided for download.")
+        print("Warning: No file ID provided to data_loader.download_csv_from_drive_to_dataframe.")
+        return None
+
+    try:
+        request = drive_service.files().get_media(fileId=file_id)
+        # Use io.BytesIO to handle the downloaded bytes stream
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request) # This is googleapiclient.http.MediaIoBaseDownload
+        
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+            # print(f"Download {int(status.progress() * 100)}%.") # Optional: console progress
+
+        fh.seek(0) # Move cursor to the beginning of the BytesIO buffer
+        
+        # Read the CSV data from BytesIO into a pandas DataFrame
+        # Try to infer encoding, but utf-8 is common. Add error handling for parsing.
+        try:
+            df = pd.read_csv(fh)
+            return df
+        except pd.errors.ParserError as pe:
+            print(f"Pandas parsing error for file ID {file_id}: {pe}. Attempting with different encoding or delimiter if applicable.")
+            # Try common encodings
+            try:
+                fh.seek(0) # Reset buffer
+                df = pd.read_csv(fh, encoding='latin1')
+                return df
+            except Exception as e_enc:
+                print(f"Failed to parse CSV with alternative encoding for file ID {file_id}: {e_enc}")
+                return None # Or raise the error to be handled by caller
+        except Exception as e_pd:
+            print(f"Error reading CSV into DataFrame for file ID {file_id}: {e_pd}")
+            return None
+
+
+    except HttpError as error:
+        # st.error(f"API error occurred while downloading file {file_id}: {error.content.decode()}")
+        print(f"API error occurred while downloading file {file_id} from Drive: {error.content.decode()}")
+        return None
+    except Exception as e:
+        # st.error(f"An unexpected error occurred while downloading file {file_id}: {e}")
+        print(f"An unexpected error occurred while downloading file {file_id} from Drive: {e}")
+        return None
