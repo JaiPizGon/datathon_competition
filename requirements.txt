@@ -2,3 +2,8 @@ streamlit
 pandas
 scikit-learn
 statsmodels
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+gspread
+oauth2client
