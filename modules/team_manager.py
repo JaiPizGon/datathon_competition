@@ -498,7 +498,7 @@ def reset_team_password(teams_worksheet: gspread.worksheet.Worksheet, team_name:
     except Exception as e:
         st.error(f"An unexpected error occurred while resetting password for '{team_name}': {e}")
         return None
-
+      
 def delete_team_row(teams_worksheet: gspread.worksheet.Worksheet, team_name: str) -> bool:
     """
     Deletes an entire row corresponding to a team_name from the 'Teams' worksheet.
@@ -631,7 +631,6 @@ def delete_submission_row(submissions_worksheet: gspread.worksheet.Worksheet, te
         # st.error(f"An unexpected error occurred while deleting submission for '{team_name}': {e}")
         print(f"UnexpectedError (team_manager.delete_submission_row): Deleting submission for '{team_name}': {e}")
         return False
-
 # Placeholder for other functions
 # Example:
 # def get_worksheet_data(workbook, worksheet_name: str):

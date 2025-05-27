@@ -1,4 +1,5 @@
 import streamlit as st
+
 from modules import data_loader, team_manager, config_manager # Assuming these are used by existing teacher_app features or will be by new ones
 from modules import config # Import the config module
 import pandas as pd # For displaying data later
@@ -458,4 +459,12 @@ if __name__ == "__main__":
     # If `from modules import config` fails on direct run, it means PYTHONPATH isn't set up as Streamlit does.
     # This is usually fine, as main entry is `app.py`.
     
+
+
+# This allows running this page directly for testing if needed,
+# though it's meant to be a page in a multipage app.
+if __name__ == "__main__":
+    # To make st.secrets work when running directly, you might need to ensure Streamlit context
+    # This is more for quick testing.
+    # Typically, you'd run `streamlit run app.py`
     show_teacher_page()
