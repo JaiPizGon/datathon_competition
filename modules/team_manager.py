@@ -498,7 +498,139 @@ def reset_team_password(teams_worksheet: gspread.worksheet.Worksheet, team_name:
     except Exception as e:
         st.error(f"An unexpected error occurred while resetting password for '{team_name}': {e}")
         return None
+      
+def delete_team_row(teams_worksheet: gspread.worksheet.Worksheet, team_name: str) -> bool:
+    """
+    Deletes an entire row corresponding to a team_name from the 'Teams' worksheet.
 
+    Args:
+        teams_worksheet: The gspread.Worksheet object for team management.
+        team_name: The name of the team to delete.
+
+    Returns:
+        True if the team row was successfully found and deleted.
+        False otherwise (e.g., team not found, API error).
+    """
+    if not teams_worksheet:
+        # st.error("Teams worksheet not provided. Cannot delete team.") # No st in modules
+        print("Error (team_manager.delete_team_row): Teams worksheet not provided.")
+        return False
+    if not team_name.strip():
+        # st.error("Team name for deletion is invalid.")
+        print("Error (team_manager.delete_team_row): Team name for deletion is invalid.")
+        return False
+
+    try:
+        # Find the row index for the team_name (case-insensitive for robustness)
+        # Assumes TeamName is in the first column (A).
+        cell_list = teams_worksheet.findall(team_name, in_column=1, case_sensitive=False)
+        
+        if not cell_list:
+            # st.warning(f"Team '{team_name}' not found. Cannot delete.")
+            print(f"Warning (team_manager.delete_team_row): Team '{team_name}' not found.")
+            return False
+        
+        # Assuming team names are unique, take the first found cell's row
+        # If multiple matches, this will delete the first one.
+        # Consider if stricter unique name enforcement is needed elsewhere or if this is acceptable.
+        row_to_delete = cell_list[0].row
+        
+        if row_to_delete == 1: # Header row protection
+            # st.error("Attempted to delete the header row. Operation aborted.")
+            print("Error (team_manager.delete_team_row): Attempted to delete the header row.")
+            return False
+
+        teams_worksheet.delete_rows(row_to_delete)
+        # st.success(f"Team '{team_name}' (row {row_to_delete}) deleted successfully.")
+        print(f"Info (team_manager.delete_team_row): Team '{team_name}' (row {row_to_delete}) deleted.")
+        return True
+
+    except gspread.exceptions.APIError as e:
+        # st.error(f"Google Sheets API error while deleting team '{team_name}': {e}")
+        print(f"APIError (team_manager.delete_team_row): Deleting team '{team_name}': {e}")
+        return False
+    except Exception as e:
+        # st.error(f"An unexpected error occurred while deleting team '{team_name}': {e}")
+        print(f"UnexpectedError (team_manager.delete_team_row): Deleting team '{team_name}': {e}")
+        return False
+
+def delete_submission_row(submissions_worksheet: gspread.worksheet.Worksheet, team_name: str, timestamp: str) -> bool:
+    """
+    Deletes a submission row based on TeamName and Timestamp from the 'Submissions' worksheet.
+    Note: This assumes TeamName and Timestamp together offer sufficient uniqueness for a submission.
+    A more robust approach might use a unique Submission ID if available.
+
+    Args:
+        submissions_worksheet: The gspread.Worksheet for submissions.
+        team_name: The name of the team whose submission is to be deleted.
+        timestamp: The timestamp string of the submission to be deleted. 
+                   (Ensure this matches the format stored in the sheet exactly).
+
+    Returns:
+        True if the submission row was successfully found and deleted.
+        False otherwise.
+    """
+    if not submissions_worksheet:
+        # st.error("Submissions worksheet not provided. Cannot delete submission.")
+        print("Error (team_manager.delete_submission_row): Submissions worksheet not provided.")
+        return False
+    if not team_name.strip() or not timestamp.strip():
+        # st.error("Team name or timestamp for submission deletion is invalid.")
+        print("Error (team_manager.delete_submission_row): Team name or timestamp invalid.")
+        return False
+
+    try:
+        # Find rows matching the team_name first (assuming 'TeamName' is column 1 or 'A')
+        team_cell_list = submissions_worksheet.findall(team_name, in_column=1, case_sensitive=False)
+        if not team_cell_list:
+            # st.warning(f"No submissions found for team '{team_name}'. Cannot delete.")
+            print(f"Info (team_manager.delete_submission_row): No submissions for team '{team_name}'.")
+            return False
+
+        row_to_delete = -1
+        # Iterate through rows where team_name matched
+        for cell in team_cell_list:
+            # Check if the timestamp in that row matches (assuming 'Timestamp' is column 2 or 'B')
+            # This requires knowing the exact column index for Timestamp.
+            # If header is ["DatathonID", "TeamName", "Timestamp", ...], then Timestamp is col 3.
+            # If header is ["TeamName", "Timestamp", ...], then Timestamp is col 2.
+            # Assuming header from Student App Step 6 was:
+            # ["TeamName", "Timestamp", "DatathonID", "Metric1_Name", "Metric1_Value", ...]
+            # So, Timestamp is column 2.
+            
+            # Fetch the entire row to check the timestamp value.
+            # Using cell.row to get the row number.
+            row_values = submissions_worksheet.row_values(cell.row)
+            
+            # Adjust index based on actual 'Timestamp' column position.
+            # If header is [TeamName, Timestamp, DatathonID, Metric1_Name, ...], Timestamp is at index 1 of row_values
+            timestamp_col_index_in_row = 1 # 0-indexed for list, for Column B
+            
+            if len(row_values) > timestamp_col_index_in_row and row_values[timestamp_col_index_in_row] == timestamp:
+                if cell.row == 1: # Header row protection
+                    print("Error (team_manager.delete_submission_row): Matched header row. Aborted.")
+                    continue # Should not happen if findall skips header, but good check
+                row_to_delete = cell.row
+                break 
+            
+        if row_to_delete == -1:
+            # st.warning(f"Submission for team '{team_name}' with timestamp '{timestamp}' not found.")
+            print(f"Info (team_manager.delete_submission_row): Submission for '{team_name}' at '{timestamp}' not found.")
+            return False
+
+        submissions_worksheet.delete_rows(row_to_delete)
+        # st.success(f"Submission for team '{team_name}' (timestamp: {timestamp}, row: {row_to_delete}) deleted.")
+        print(f"Info (team_manager.delete_submission_row): Submission for '{team_name}' at '{timestamp}' (row {row_to_delete}) deleted.")
+        return True
+
+    except gspread.exceptions.APIError as e:
+        # st.error(f"Google Sheets API error while deleting submission for '{team_name}': {e}")
+        print(f"APIError (team_manager.delete_submission_row): Deleting submission for '{team_name}': {e}")
+        return False
+    except Exception as e:
+        # st.error(f"An unexpected error occurred while deleting submission for '{team_name}': {e}")
+        print(f"UnexpectedError (team_manager.delete_submission_row): Deleting submission for '{team_name}': {e}")
+        return False
 # Placeholder for other functions
 # Example:
 # def get_worksheet_data(workbook, worksheet_name: str):

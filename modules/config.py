@@ -34,3 +34,8 @@ PRIMARY_METRIC_SORT_ASCENDING = {
 # Ensure the metric names used as keys in PRIMARY_METRIC_SORT_ASCENDING
 # exactly match the values provided in PRIMARY_METRICS and the keys in the
 # dictionaries returned by the metrics calculation functions in metrics.py.
+
+# --- Teacher Admin Authentication ---
+# IMPORTANT: Change this to a strong, unique, random token in your actual deployment!
+# This token is used for the Teacher Admin Dashboard login.
+TEACHER_ADMIN_TOKEN = "replace_this_with_a_very_secure_random_string"
