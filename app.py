@@ -104,6 +104,7 @@ def main():
     if "page" not in st.session_state:
         st.session_state.page = "Parent/Teacher Setup" 
 
+
     PAGES = {
         "Parent/Teacher Setup": parent_selector.show_parent_selector_page,
         "Student App": student_app.show_student_page,

@@ -457,5 +457,4 @@ if __name__ == "__main__":
     # For the purpose of this subtask, we assume config is importable.
     # If `from modules import config` fails on direct run, it means PYTHONPATH isn't set up as Streamlit does.
     # This is usually fine, as main entry is `app.py`.
-    
     show_teacher_page()
